@@ -28,7 +28,7 @@ supertokens.init({
 // Setup Express
 const app = express();
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: "http://3.131.82.143:3000",
   allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
   credentials: true,
 }));
