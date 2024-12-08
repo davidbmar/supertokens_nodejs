@@ -3,33 +3,33 @@ const cors = require('cors');
 const supertokens = require('supertokens-node');
 const { middleware, errorHandler } = require('supertokens-node/framework/express');
 const Passwordless = require('supertokens-node/recipe/passwordless');
+// Add this line to import Session
+const Session = require('supertokens-node/recipe/session');
 const { appInfo } = require('./appInfo');
 
 // Initialize SuperTokens
 supertokens.init({
   framework: "express",
   supertokens: {
-    connectionURI: "https://try.supertokens.com", // For testing; switch to your own core later if needed
+    connectionURI: "https://try.supertokens.com"
   },
   appInfo,
   recipeList: [
     Passwordless.init({
       contactMethod: "EMAIL",
       flowType: "USER_INPUT_CODE_AND_MAGIC_LINK",
-      createAndSendCustomEmail: async (input, context) => {
-        // Here you would configure how emails are sent.
-        // For a prototype, you can just log the URL.
+      createAndSendCustomEmail: async (input) => {
         console.log("Login URL:", input.urlWithLinkCode);
       },
     }),
-    Session.init() // Add this line
+    // Now Session should be defined
+    Session.init()
   ],
 });
 
-// Setup Express
 const app = express();
 app.use(cors({
-  origin: "http://3.131.82.143:3000",
+  origin: "http://3.131.82.143:3000", // or your domain
   allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
   credentials: true,
 }));
@@ -42,7 +42,6 @@ app.get("/ping", (req, res) => {
 
 app.use(errorHandler());
 
-// Start server
-app.listen(3001, () => {
+app.listen(3001, '0.0.0.0', () => {
   console.log("Server running on http://localhost:3001");
 });
