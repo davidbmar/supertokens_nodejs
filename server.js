@@ -22,6 +22,7 @@ supertokens.init({
         console.log("Login URL:", input.urlWithLinkCode);
       },
     }),
+    Session.init() // Add this line
   ],
 });
 
