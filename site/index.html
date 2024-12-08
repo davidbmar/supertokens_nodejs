@@ -21,7 +21,7 @@
                 content.textContent = "Verifying your login link...";
 
                 // POST request to consume code
-                fetch('http://localhost:3001/auth/signinup/code/consume', {
+                fetch('http://3.131.82.143:3001/auth/signinup/code/consume', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include', // This allows cookies to be stored for the session
@@ -57,7 +57,7 @@
                         alert("Please enter an email address");
                         return;
                     }
-                    fetch('http://localhost:3001/auth/signinup/code', {
+                    fetch('http://3.131.82.143:3001/auth/signinup/code', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email })
