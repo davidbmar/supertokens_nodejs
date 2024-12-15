@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard - SuperTokens Demo</title>
+    <style>
+        /* ... (keep existing styles) ... */
+        .session-timer {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="sessionTimer" class="session-timer">
+        Checking session...
+    </div>
+
+    <div class="container">
+        <h1>Dashboard</h1>
+        <div id="content">Loading...</div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://3.131.82.143:3001';
+
+        // Check session status periodically
+        async function checkSession() {
+            try {
+                const response = await fetch(`${API_BASE}/api/session/check`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (!data.isLoggedIn) {
+                    window.location.href = '/';
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                console.error('Session check failed:', error);
+                return false;
+            }
+        }
+
+        // Update session timer
+        function updateSessionTimer() {
+            const timer = document.getElementById('sessionTimer');
+            const now = new Date();
+            timer.textContent = `Last session check: ${now.toLocaleTimeString()}`;
+        }
+
+        // Initialize page
+        async function init() {
+            const isSessionValid = await checkSession();
+            if (isSessionValid) {
+                document.getElementById('content').innerHTML = `
+                    <div class="card">
+                        <h2>Welcome to the Dashboard</h2>
+                        <p>Your session is active.</p>
+                        <button onclick="logout()">Logout</button>
+                    </div>
+                `;
+                updateSessionTimer();
+            }
+        }
+
+        // Logout function
+        async function logout() {
+            try {
+                await fetch(`${API_BASE}/api/session/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Logout failed:', error);
+            }
+        }
+
+        // Check session every minute
+        setInterval(async () => {
+            await checkSession();
+            updateSessionTimer();
+        }, 60000);
+
+        // Initial load
+        init();
+    </script>
+</body>
+</html>

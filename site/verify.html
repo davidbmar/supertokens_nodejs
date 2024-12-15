@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Verifying - SuperTokens Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: #f5f5f5;
+        }
+        .verification-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0070f3;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #e3f9e5;
+            color: #0a7d33;
+        }
+        .error {
+            background: #fde8e8;
+            color: #c81e1e;
+        }
+        #debugInfo {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f7f7f7;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            text-align: left;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="verification-card">
+        <h2>Verifying Login</h2>
+        <div id="verificationContent">
+            <div class="spinner"></div>
+            <p>Verifying your login link...</p>
+        </div>
+        <div id="debugInfo"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://3.131.82.143:3001';
+        const DASHBOARD_URL = '/dashboard.html';
+
+        function showDebugInfo(message) {
+            const debugDiv = document.getElementById('debugInfo');
+            debugDiv.style.display = 'block';
+            debugDiv.innerHTML += `<div>${new Date().toISOString()}: ${message}</div>`;
+        }
+
+        function showError(message) {
+            document.getElementById('verificationContent').innerHTML = `
+                <div class="status error">
+                    <p>❌ ${message}</p>
+                    <p><a href="/">Return to login</a></p>
+                </div>
+            `;
+        }
+
+        function showSuccess(message) {
+            document.getElementById('verificationContent').innerHTML = `
+                <div class="status success">
+                    <p>✅ ${message}</p>
+                    <p>Redirecting to dashboard...</p>
+                </div>
+            `;
+        }
+
+        async function verifyMagicLink() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const preAuthSessionId = urlParams.get('preAuthSessionId');
+                const linkCode = window.location.hash.substring(1);
+
+                showDebugInfo(`Verifying with preAuthSessionId: ${preAuthSessionId}`);
+                showDebugInfo(`Link code: ${linkCode}`);
+
+                if (!preAuthSessionId || !linkCode) {
+                    throw new Error('Invalid verification link');
+                }
+
+                const response = await fetch(`${API_BASE}/auth/signinup/code/consume`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        preAuthSessionId,
+                        linkCode
+                    })
+                });
+
+                const data = await response.json();
+                showDebugInfo(`Verification response: ${JSON.stringify(data)}`);
+
+                if (data.status === 'OK') {
+                    showSuccess('Login successful!');
+                    setTimeout(() => {
+                        window.location.href = DASHBOARD_URL;
+                    }, 1500);
+                } else {
+                    throw new Error(data.status || 'Verification failed');
+                }
+            } catch (error) {
+                showDebugInfo(`Error: ${error.message}`);
+                showError(error.message);
+            }
+        }
+
+        // Show debug panel with keyboard shortcut
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'd' && e.ctrlKey) {
+                document.getElementById('debugInfo').style.display = 
+                    document.getElementById('debugInfo').style.display === 'none' ? 'block' : 'none';
+            }
+        });
+
+        // Start verification when page loads
+        verifyMagicLink();
+    </script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login - SuperTokens Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: #f5f5f5;
+        }
+        .login-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        .input {
+            width: 100%;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .button {
+            width: 100%;
+            padding: 0.75rem;
+            background: #0070f3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        .button:hover {
+            background: #0051a2;
+        }
+        .status {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .success {
+            background: #e3f9e5;
+            color: #0a7d33;
+        }
+        .error {
+            background: #fde8e8;
+            color: #c81e1e;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h1 style="text-align: center; margin-bottom: 2rem;">Welcome Back</h1>
+        <div id="loginContent">
+            <input type="email" id="emailInput" class="input" placeholder="Enter your email" />
+            <button id="loginBtn" class="button">Send Magic Link</button>
+        </div>
+    </div>
+
+    <script>
+        // Store the intended redirect URL
+        const DASHBOARD_URL = '/dashboard.html';
+        
+        // Check if we're already logged in
+        fetch('http://3.131.82.143:3001/api/session/info', {
+            credentials: 'include'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.sessionExists) {
+                window.location.href = DASHBOARD_URL;
+            }
+        });
+
+        // Function to show status messages
+        function showStatus(message, isError = false) {
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${isError ? 'error' : 'success'}`;
+            statusDiv.textContent = message;
+            document.getElementById('loginContent').appendChild(statusDiv);
+            return statusDiv;
+        }
+
+        // Handle magic link verification
+        const urlParams = new URLSearchParams(window.location.search);
+        const rid = urlParams.get('rid');
+        const preAuthSessionId = urlParams.get('preAuthSessionId');
+        const linkCode = window.location.hash.substring(1);
+
+        if (rid === 'passwordless' && preAuthSessionId && linkCode) {
+            const statusDiv = showStatus("Verifying your login link...");
+            
+            fetch('http://3.131.82.143:3001/auth/signinup/code/consume', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ preAuthSessionId, linkCode })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'OK') {
+                    statusDiv.textContent = "Login successful! Redirecting...";
+                    setTimeout(() => {
+                        window.location.href = DASHBOARD_URL;
+                    }, 1000);
+                } else {
+                    statusDiv.textContent = "Login verification failed: " + data.status;
+                    statusDiv.className = 'status error';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                statusDiv.textContent = "An error occurred while verifying the code.";
+                statusDiv.className = 'status error';
+            });
+        }
+
+        // Handle login button click
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const email = document.getElementById('emailInput').value;
+            if (!email) {
+                showStatus('Please enter an email address', true);
+                return;
+            }
+
+            fetch('http://3.131.82.143:3001/auth/signinup/code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "OK") {
+                    const statusDiv = showStatus('Magic link has been generated!');
+                    document.getElementById('loginContent').innerHTML = `
+                        <div class="status success">
+                            <p>✅ Magic link has been generated!</p>
+                            <p style="font-size: 0.9rem">Check the server console for the link.</p>
+                            <p style="font-size: 0.9rem">Copy and paste the link to login.</p>
+                        </div>
+                    `;
+                } else {
+                    showStatus('Could not initiate login: ' + data.status, true);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

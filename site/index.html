@@ -3,76 +3,211 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Supertokens Passwordless Demo</title>
+    <title>SuperTokens Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            margin: 1rem;
+        }
+        .input {
+            width: 100%;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .button {
+            width: 100%;
+            padding: 0.75rem;
+            background: #0070f3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        .button:hover {
+            background: #0051a2;
+        }
+        .status {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .success {
+            background: #e3f9e5;
+            color: #0a7d33;
+        }
+        .error {
+            background: #fde8e8;
+            color: #c81e1e;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0070f3;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #debugInfo {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f7f7f7;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <h1>Supertokens Passwordless Test</h1>
-    <div id="content"></div>
+    <div class="card">
+        <h1 style="text-align: center; margin-bottom: 2rem;">SuperTokens Demo</h1>
+        <div id="mainContent"></div>
+        <div id="debugInfo"></div>
+    </div>
+
     <script>
-        (function() {
-            const content = document.getElementById('content');
-            const urlParams = new URLSearchParams(window.location.search);
-            const rid = urlParams.get('rid');
-            const preAuthSessionId = urlParams.get('preAuthSessionId');
-            const linkCode = window.location.hash.substring(1); // The linkCode is after the '#' in the URL
+        const API_BASE = 'http://3.131.82.143:3001';
+        
+        function debug(message) {
+            const debugDiv = document.getElementById('debugInfo');
+            const timestamp = new Date().toISOString();
+            debugDiv.style.display = 'block';
+            debugDiv.innerHTML += `<div>${timestamp}: ${message}</div>`;
+        }
 
-            // If we have passwordless link parameters:
-            if (rid === 'passwordless' && preAuthSessionId && linkCode) {
-                content.textContent = "Verifying your login link...";
+        function showLoginForm() {
+            document.getElementById('mainContent').innerHTML = `
+                <div>
+                    <input type="email" id="emailInput" class="input" placeholder="Enter your email" />
+                    <button onclick="sendMagicLink()" class="button">Send Magic Link</button>
+                </div>
+            `;
+        }
 
-                // POST request to consume code
-                fetch('http://3.131.82.143:3001/auth/signinup/code/consume', {
+        async function sendMagicLink() {
+            const email = document.getElementById('emailInput').value;
+            if (!email) {
+                showMessage('Please enter an email address', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/signinup/code`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include', // This allows cookies to be stored for the session
-                    body: JSON.stringify({
-                        preAuthSessionId,
-                        linkCode
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'OK') {
-                        // Sign in succeeded; session cookies are now set
-                        content.textContent = "Login successful! You are now signed in.";
-                    } else {
-                        content.textContent = "Login verification failed: " + data.status;
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    content.textContent = "An error occurred while verifying the code.";
+                    body: JSON.stringify({ email })
                 });
-            } else {
-                // No verification parameters found, display a simple start login button
-                content.innerHTML = `
-                    <p>No verification link found. Click the button below to initiate login.</p>
-                    <button id="loginBtn">Send Magic Link to Email</button>
-                    <input type="email" id="emailInput" placeholder="Enter your email" style="display:block; margin-top:10px;" />
-                `;
+                const data = await response.json();
 
-                document.getElementById('loginBtn').addEventListener('click', () => {
-                    const email = document.getElementById('emailInput').value;
-                    if (!email) {
-                        alert("Please enter an email address");
-                        return;
-                    }
-                    fetch('http://3.131.82.143:3001/auth/signinup/code', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email })
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.status === "OK") {
-                            content.textContent = "A login link has been 'sent' (check the server console). Copy and paste the printed URL here in the browser.";
-                        } else {
-                            content.textContent = "Could not initiate login: " + data.status;
-                        }
-                    });
-                });
+                if (data.status === "OK") {
+                    showMessage('Magic link has been generated! Check the server console for the link.', false);
+                } else {
+                    showMessage('Failed to generate magic link: ' + data.status, true);
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, true);
             }
-        })();
+        }
+
+        function showMessage(message, isError) {
+            document.getElementById('mainContent').innerHTML = `
+                <div class="status ${isError ? 'error' : 'success'}">
+                    <p>${message}</p>
+                    ${isError ? '<button onclick="showLoginForm()" class="button">Try Again</button>' : ''}
+                </div>
+            `;
+        }
+
+        async function verifyMagicLink(preAuthSessionId, linkCode) {
+            debug(`Verifying magic link... PreAuthSessionId: ${preAuthSessionId}`);
+            
+            document.getElementById('mainContent').innerHTML = `
+                <div class="status">
+                    <div class="spinner"></div>
+                    <p>Verifying your login...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/signinup/code/consume`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ preAuthSessionId, linkCode })
+                });
+
+                const data = await response.json();
+                debug(`Verification response: ${JSON.stringify(data)}`);
+
+                if (data.status === 'OK') {
+                    document.getElementById('mainContent').innerHTML = `
+                        <div class="status success">
+                            <p>✅ Login successful!</p>
+                            <p>You are now logged in.</p>
+                            <button onclick="window.location.href='/dashboard.html'" class="button">
+                                Go to Dashboard
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    showMessage('Verification failed: ' + data.status, true);
+                }
+            } catch (error) {
+                debug(`Verification error: ${error.message}`);
+                showMessage('Error during verification: ' + error.message, true);
+            }
+        }
+
+        // Initialize page
+        function init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const preAuthSessionId = urlParams.get('preAuthSessionId');
+            const linkCode = window.location.hash.substring(1);
+
+            debug(`URL Parameters - preAuthSessionId: ${preAuthSessionId}, hashValue: ${linkCode}`);
+
+            if (preAuthSessionId && linkCode) {
+                verifyMagicLink(preAuthSessionId, linkCode);
+            } else {
+                showLoginForm();
+            }
+        }
+
+        // Show/hide debug info with Ctrl+D
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'd') {
+                const debugDiv = document.getElementById('debugInfo');
+                debugDiv.style.display = debugDiv.style.display === 'none' ? 'block' : 'none';
+            }
+        });
+
+        // Start the page
+        init();
     </script>
 </body>
 </html>
